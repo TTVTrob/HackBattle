@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: hackbattle-web
+    env: node
+    plan: free
+    branch: main
+    buildCommand: "npm install"
+    startCommand: "npm start"
+    healthCheckPath: /
+    autoDeploy: true
