@@ -1,20 +1,3 @@
-"""
-Simple 2-player pickup & attack demo using pygame.
-
-Controls:
- - Player 1 (Blue): W/A/S/D to move, F to pick up / use item
- - Player 2 (Red): Arrow keys to move, L to pick up / use item
-
-Requirements:
- - pygame (install with `pip install pygame`)
-
-This mirrors the behavior of the JS demo in `game.js`:
- - Items have `damage` and `uses` (durability)
- - Using an item spawns a short attack that applies `damage` to the other player
- - Each damage point counts as one hit; 10 hits kills a player (they become a spectator)
- - Items break when `uses` reaches 0; dropped on death with remaining uses preserved
-"""
-
 import sys
 import pygame
 
@@ -457,3 +440,4 @@ while running:
 
 pygame.quit()
 sys.exit()
+
