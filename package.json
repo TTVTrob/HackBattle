@@ -1,0 +1,18 @@
+{
+  "name": "re-try",
+  "version": "1.0.0",
+  "description": "",
+  "main": "game.js",
+  "scripts": {
+    "start": "node server_websoc.js",
+    "test:clients": "node test_clients.js",
+    "test:connect": "node test_connect.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "socket.io": "^4.8.1",
+    "socket.io-client": "^4.7.2"
+  }
+}

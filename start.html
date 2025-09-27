@@ -1,0 +1,336 @@
+<script type="text/babel">
+  const { useState, useEffect } = React;
+
+  // --- Reusable UI Components (Pixel Perfect Remake) ---
+
+  const Panel = ({ children, className = '' }) => (
+    <div className={`bg-[#8c5a3b] border-4 border-[#5a3a29] rounded-lg shadow-lg p-6 sm:p-8 w-full max-w-xl text-white font-pixel ${className}`}>
+      {children}
+    </div>
+  );
+
+  const PixelButton = ({ onClick, children, className = '', variant = 'primary' }) => {
+    const baseClasses = "font-bold py-3 px-6 rounded-md border-b-4 active:border-b-0 active:translate-y-1 transition-all duration-100 focus:outline-none focus:ring-2 focus:ring-yellow-300 focus:ring-opacity-50 transform hover:scale-105";
+    const variants = {
+      primary: "bg-yellow-400 text-stone-800 border-orange-600 hover:bg-yellow-300 hover:border-orange-500",
+      secondary: "bg-orange-500 text-white border-orange-700 hover:bg-orange-400 hover:border-orange-600"
+    };
+    return (
+      <button onClick={onClick} className={`${baseClasses} ${variants[variant]} ${className}`}>
+        {children}
+      </button>
+    );
+  };
+
+  const PixelInput = ({ value, onChange, placeholder, className = '' }) => (
+    <input
+      type="text"
+      value={value}
+      onChange={onChange}
+      placeholder={placeholder}
+      className={`bg-yellow-200 border-4 border-orange-500 rounded-md text-stone-800 placeholder:text-orange-800/70 px-4 py-3 text-center text-lg focus:outline-none focus:ring-2 ring-yellow-300 w-full ${className}`}
+    />
+  );
+
+  // --- Screen Components ---
+
+  const HomeScreen = ({ setScreen, onQuit }) => (
+    <div className="text-center">
+      <h1 className="text-7xl sm:text-8xl font-bold text-white mb-2 animate-float" style={{ textShadow: '4px 4px 0px #5a3a29' }}>ELEMENZ</h1>
+      <p className="text-yellow-200 mb-12 text-lg">A Pixelated Arena Battler</p>
+      <div className="space-y-4">
+        <PixelButton onClick={() => setScreen('characterSelect')} className="w-full max-w-xs sm:w-64 text-2xl">
+          START
+        </PixelButton>
+        <div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-4">
+          <PixelButton onClick={() => setScreen('guide1')} className="w-full max-w-xs sm:w-48">
+            GUIDE
+          </PixelButton>
+          <PixelButton onClick={onQuit} className="w-full max-w-xs sm:w-48">
+            QUIT
+          </PixelButton>
+        </div>
+      </div>
+    </div>
+  );
+
+  const GuideScreen = ({ setScreen, page }) => (
+    <Panel>
+      {page === 1 && (
+        <>
+          <h2 className="text-3xl sm:text-4xl text-center mb-6 text-yellow-300">Welcome to ELEMENZ!</h2>
+          <p className="mb-4 text-base sm:text-lg">A fast-paced 2D multiplayer combat game where you collect elements, merge them for powerful attacks, and battle other players!</p>
+          <div className="flex flex-col sm:flex-row justify-between mt-6 text-base sm:text-xl space-y-2 sm:space-y-0">
+            <div><strong className="text-yellow-200">Objective:</strong> Survive 10 minutes.</div>
+            <div><strong className="text-yellow-200">Players:</strong> Up to 5 per match.</div>
+          </div>
+          <div className="flex justify-between items-center mt-8">
+            <PixelButton onClick={() => setScreen('home')} variant="secondary">CLOSE</PixelButton>
+            <PixelButton onClick={() => setScreen('guide2')}>NEXT &gt;</PixelButton>
+          </div>
+        </>
+      )}
+      {page === 2 && (
+        <>
+          <h2 className="text-3xl sm:text-4xl text-center mb-6 text-yellow-300">How To Play</h2>
+          <ul className="list-disc list-inside space-y-3 text-base sm:text-lg">
+            <li><strong>Move:</strong> Use WASD keys.</li>
+            <li><strong>Collect:</strong> Walk over elements. You can hold up to 2.</li>
+            <li><strong>Merge:</strong> Picking up a second element automatically merges them.</li>
+            <li><strong>Attack:</strong> Press Spacebar to unleash your element's power.</li>
+          </ul>
+          <div className="flex justify-between mt-8">
+            <PixelButton onClick={() => setScreen('guide1')}>&lt; PREVIOUS</PixelButton>
+            <PixelButton onClick={() => setScreen('home')} variant="secondary">CLOSE</PixelButton>
+          </div>
+        </>
+      )}
+    </Panel>
+  );
+
+  const CharacterSelectScreen = ({ setScreen, playerName, setPlayerName, selectedBob, setSelectedBob, error, setError }) => {
+    const bobs = [
+      './images/bob1.png',
+      './images/bob2.png',
+      './images/bob3.png',
+      './images/bob4.png',
+      './images/bob5.png'
+    ];
+
+    const handleNext = () => {
+      if (playerName.trim() === '') {
+        setError('Please enter a name!');
+        return;
+      }
+      if (selectedBob === null) {
+        setError('Please select your character!');
+        return;
+      }
+      setError('');
+      setScreen('lobby');
+    };
+
+    return (
+      <Panel>
+        <h2 className="text-3xl text-center mb-4 text-yellow-300">Choose Your Fighter</h2>
+        {error && <p className="text-center text-red-400 mb-4 text-lg -mt-2">{error}</p>}
+        <PixelInput
+          value={playerName}
+          onChange={(e) => { setPlayerName(e.target.value); setError(''); }}
+          placeholder="ENTER YOUR NAME"
+          className="mb-6"
+        />
+        <p className="text-center mb-4 text-xl">Pick Your Bob:</p>
+        <div className="flex justify-center space-x-2 sm:space-x-4 mb-8">
+          {bobs.map((bob, index) => (
+            <button
+              key={index}
+              onClick={() => { setSelectedBob(index); setError(''); }}
+              className={`w-16 h-16 sm:w-20 sm:h-20 rounded-lg flex items-center justify-center transition-all duration-150 transform hover:scale-110 p-1 ${selectedBob === index ? 'bg-yellow-400/30 ring-4 ring-yellow-300' : 'bg-orange-500'}`}
+            >
+              <img src={bob} alt={`Bob ${index + 1}`} className="w-full h-full object-cover rounded-md" />
+            </button>
+          ))}
+        </div>
+        <div className="flex justify-between">
+          <PixelButton onClick={() => setScreen('home')} variant="secondary">&lt; BACK</PixelButton>
+          <PixelButton onClick={handleNext}>NEXT &gt;</PixelButton>
+        </div>
+      </Panel>
+    );
+  };
+
+  const LobbyScreen = ({ setScreen, lobbyCode, setLobbyCode, handleCreateLobby, handleJoinLobby, error, setError }) => (
+    <Panel>
+      <h2 className="text-4xl text-center mb-8 text-yellow-300">Multiplayer Lobby</h2>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 items-center">
+        <div className="text-center space-y-4">
+          <h3 className="text-2xl">CREATE LOBBY</h3>
+          <PixelButton onClick={handleCreateLobby} className="w-full">CREATE</PixelButton>
+        </div>
+        <div className="text-center space-y-4">
+          <h3 className="text-2xl">JOIN LOBBY</h3>
+          <PixelInput
+            value={lobbyCode}
+            onChange={(e) => { setLobbyCode(e.target.value.toUpperCase()); setError(''); }}
+            placeholder="ENTER CODE"
+          />
+          <PixelButton onClick={handleJoinLobby} className="w-full">JOIN</PixelButton>
+        </div>
+      </div>
+      {error && <p className="text-center text-red-400 mt-6 text-lg">{error}</p>}
+      <div className="text-center mt-12">
+        <PixelButton onClick={() => setScreen('characterSelect')} variant="secondary">&lt; BACK</PixelButton>
+      </div>
+    </Panel>
+  );
+
+  const LobbyWaitingScreen = ({ setScreen, lobbyCode, players, handleStartGame }) => {
+    const bobs = [
+      './images/bob1.png',
+      './images/bob2.png',
+      './images/bob3.png',
+      './images/bob4.png',
+      './images/bob5.png'
+    ];
+    return (
+      <Panel>
+        <h2 className="text-3xl text-center mb-4 text-yellow-300">Lobby Waiting Room</h2>
+        <div className="text-center mb-6">
+          <p className="text-lg">SHARE THIS CODE:</p>
+          <p className="text-4xl sm:text-5xl font-bold text-white tracking-widest bg-[#5a3a29] py-2 px-4 rounded-md inline-block my-2">{lobbyCode}</p>
+        </div>
+        <div className="bg-[#5a3a29] p-4 rounded-md min-h-[200px]">
+          <h3 className="text-2xl mb-4 text-yellow-300">Players ({players.length}/5)</h3>
+          <div className="space-y-3">
+            {players.map((player, index) => (
+              <div key={index} className="bg-orange-500 p-3 rounded-md flex items-center justify-between">
+                <img src={bobs[player.bobIndex]} alt={`Bob ${player.bobIndex + 1}`} className="w-12 h-12 object-cover rounded-md" />
+                <span className="text-xl font-bold">{player.name}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="flex justify-between mt-8">
+          <PixelButton onClick={() => setScreen('lobby')} variant="secondary">&lt; BACK</PixelButton>
+          <PixelButton onClick={handleStartGame}>START GAME</PixelButton>
+        </div>
+      </Panel>
+    );
+  };
+
+  const GameScreen = () => {
+    useEffect(() => {
+      const bg = document.getElementById('background-layers');
+      if (bg) bg.style.display = 'none';
+
+      // Placeholder for game logic.
+      const gameContainer = document.getElementById('game-container');
+      const canvas = document.createElement('canvas');
+      canvas.id = 'gameCanvas';
+      canvas.width = 1200;
+      canvas.height = 720;
+      gameContainer.innerHTML = '';
+      gameContainer.appendChild(canvas);
+
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#7ed957';
+      ctx.fillRect(0, 0, 1200, 720);
+      ctx.fillStyle = 'white';
+      ctx.font = '48px "Press Start 2P"';
+      ctx.textAlign = 'center';
+      ctx.fillText('Game Starts Here!', 600, 360);
+
+      return () => {
+        if (bg) bg.style.display = 'block';
+      };
+    }, []);
+    return (
+      <div id="game-container">
+      </div>
+    );
+  };
+
+  const QuitConfirmModal = ({ onConfirm, onCancel }) => (
+    <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
+      <Panel className="text-center">
+        <h2 className="text-2xl sm:text-3xl text-yellow-300 mb-8">Are you sure you want to quit?</h2>
+        <div className="flex justify-center space-x-4">
+          <PixelButton onClick={onConfirm} className="w-32">YES</PixelButton>
+          <PixelButton onClick={onCancel} variant="secondary" className="w-32">NO</PixelButton>
+        </div>
+      </Panel>
+    </div>
+  );
+
+  // --- Main App Component ---
+
+  function App() {
+    const [screen, setScreen] = useState('home');
+    const [playerName, setPlayerName] = useState('');
+    const [selectedBob, setSelectedBob] = useState(null);
+    const [lobbyCode, setLobbyCode] = useState('');
+    const [error, setError] = useState('');
+    const [players, setPlayers] = useState([]);
+    const [showQuitConfirm, setShowQuitConfirm] = useState(false);
+    const [isExiting, setIsExiting] = useState(false);
+
+    const handleCreateLobby = () => {
+      const newCode = Math.random().toString(36).substring(2, 6).toUpperCase();
+      setLobbyCode(newCode);
+      if (selectedBob !== null) {
+        setPlayers([{ name: playerName, bobIndex: selectedBob }]);
+        setScreen('lobbyWaiting');
+      } else {
+        setError('Please select a character first!');
+        setScreen('characterSelect');
+      }
+    };
+
+    const handleJoinLobby = () => {
+      if (lobbyCode.trim() === '') {
+        setError('Please enter a lobby code.');
+        return;
+      }
+      setError('');
+      // Mock joining a lobby
+      const otherPlayer = { name: 'Opponent', bobIndex: (selectedBob + 1) % 5 };
+      const currentPlayer = { name: playerName, bobIndex: selectedBob };
+      setPlayers([otherPlayer, currentPlayer]);
+      setScreen('lobbyWaiting');
+    };
+
+    const handleStartGame = () => {
+      setScreen('game');
+    };
+
+    const handleQuitConfirm = () => {
+      setIsExiting(true);
+    };
+
+    const handleQuitCancel = () => {
+      setShowQuitConfirm(false);
+    };
+
+    if (isExiting) {
+      return (
+        <div className="w-screen h-screen flex items-center justify-center text-center">
+          <h1 className="text-4xl text-white">Thanks for playing!</h1>
+        </div>
+      );
+    }
+
+    const renderScreen = () => {
+      switch (screen) {
+        case 'guide1':
+          return <GuideScreen setScreen={setScreen} page={1} />;
+        case 'guide2':
+          return <GuideScreen setScreen={setScreen} page={2} />;
+        case 'characterSelect':
+          return <CharacterSelectScreen setScreen={setScreen} playerName={playerName} setPlayerName={setPlayerName} selectedBob={selectedBob} setSelectedBob={setSelectedBob} error={error} setError={setError} />;
+        case 'lobby':
+          return <LobbyScreen setScreen={setScreen} lobbyCode={lobbyCode} setLobbyCode={setLobbyCode} handleCreateLobby={handleCreateLobby} handleJoinLobby={handleJoinLobby} error={error} setError={setError} />;
+        case 'lobbyWaiting':
+          return <LobbyWaitingScreen setScreen={setScreen} lobbyCode={lobbyCode} players={players} handleStartGame={handleStartGame} />;
+        case 'game':
+          return <GameScreen />;
+        case 'home':
+        default:
+          return <HomeScreen setScreen={setScreen} onQuit={() => setShowQuitConfirm(true)} />;
+      }
+    };
+
+    return (
+      <main className="w-screen h-screen flex items-center justify-center p-4">
+        {renderScreen()}
+        {showQuitConfirm && <QuitConfirmModal onConfirm={handleQuitConfirm} onCancel={handleQuitCancel} />}
+      </main>
+    );
+  }
+
+  const container = document.getElementById('root');
+  const root = ReactDOM.createRoot(container);
+  root.render(<App />);
+</script>
+</body>
+</html>

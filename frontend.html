@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ELEMENZ - Pixelated Arena Battler</title>
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts for the pixel font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>
+        /* Applying the pixel font globally */
+        body {
+            font-family: 'Press Start 2P', cursive;
+            overflow: hidden;
+            background-color: #87CEEB; /* Base sky color */
+        }
+        .font-pixel {
+            font-family: 'Press Start 2P', cursive;
+        }
+        /* Style for the game canvas container */
+        #game-container {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        canvas {
+            border: 6px solid #5a3a29;
+            border-radius: 8px;
+            max-width: 100%;
+            max-height: 100%;
+        }
+        /* --- ANIMATIONS --- */
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-8px); }
+            100% { transform: translateY(0px); }
+        }
+        .animate-float {
+            animation: float 5s ease-in-out infinite;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.98); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        @keyframes fadeOut {
+            from { opacity: 1; transform: scale(1); }
+            to { opacity: 0; transform: scale(0.98); }
+        }
+        .animate-fade-in {
+            animation: fadeIn 0.3s ease-out forwards;
+        }
+        .animate-fade-out {
+            animation: fadeOut 0.3s ease-in forwards;
+        }
+        /* Loading icon animation */
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.1); opacity: 0.8; }
+        }
+        .animate-pulse-icon {
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+        @keyframes loading-bar-fill {
+            from { width: 0%; }
+            to { width: 100%; }
+        }
+        .loading-bar-progress {
+            animation: loading-bar-fill 1s ease-out forwards;
+            animation-delay: 0.1s;
+        }
+        /* Drifting clouds animation */
+        @keyframes drift {
+            from { transform: translateX(-200px); } /* Start off-screen */
+            to { transform: translateX(100vw); }   /* Move across the full screen width */
+        }
+        .cloud {
+            position: absolute;
+            background-repeat: no-repeat;
+            background-size: contain;
+            animation-name: drift;
+            animation-timing-function: linear;
+            animation-iteration-count: infinite;
+            filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1));
+        }
+
+        /* Ensure crisp pixel art rendering */
+        .pixel-art {
+            image-rendering: pixelated;
+            image-rendering: -moz-crisp-edges;
+            image-rendering: crisp-edges;
+        }
+    </style>
+</head>
+<body> 
+    <!-- The root element where our React app will be mounted -->
+    <div id="root" class="relative z-10"></div>
+
+    <!-- React and ReactDOM libraries -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+    
+    <!-- Babel to transpile JSX in the browser -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <!-- Your React application code -->
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // --- FIXED Image Data URLs ---
+        const bobImageData = [
+          'images/bob1.png',
+          'images/bob2.png',
+          'images/bob3.png',
+          'images/bob4.png',
+          'images/bob5.png'
+        ];
+        
+        // --- NEW ASSETS ---
+        const cloudSvg1 = "data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgMTIwIDcwIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxwYXRoIGQ9Ik0gMTAgNzAgQyAtMTAgNzAgLTIwIDQwLCAyMCAzMCBDIDMwIDEwLCA3MCAxMCwgODAgMzAgQyAxMjAgMzAsIDEyNSA3MCwgMTAwIDcwIFoiIGZpbGw9IndoaXRlIi8+PC9zdmc+";
+        const cloudSvg2 = "data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgMTUwIDkwIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxwYXRoIGQ9Ik0gMjAgOTAgQyAwIDkwLCAwIDYwLCAzMCA1MCBDIDQwIDMwLCA4MCAzMCwgMTAwIDUwIEMgMTMwIDUwLCAxNTAgOTAsIDEzMCA5MCBaIiBmaWxsPSJ3aGl0ZSIvPjwvc3ZnPg==";
+        const cloudSvg3 = "data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgODAgNTAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZD0iTSA1IDUwIEMgLTMgNTAsIC01IDMwLCAxNSAyNSBDIDIwIDEwLCA2MCAxMCwgNjUgMjUgQyA4NSA0MCwgODAgNTAsIDc1IDUwIFoiIGZpbGw9IndoaXRlIi8+PC9zdmc+";
+
+        // --- Reusable UI Components ---
+        
+        const Scenery = () => {
+            return (
+                <div className="absolute inset-0 w-full h-full overflow-hidden pointer-events-none z-0">
+                    <div className="cloud" style={{ top: '10%', animationDuration: '60s', backgroundImage: `url('${cloudSvg1}')`, width: '250px', height: '100px', opacity: '0.9' }} />
+                    <div className="cloud" style={{ top: '20%', animationDuration: '80s', animationDelay: '-20s', backgroundImage: `url('${cloudSvg2}')`, width: '300px', height: '120px', opacity: '0.8' }} />
+                    <div className="cloud" style={{ top: '30%', animationDuration: '55s', animationDelay: '-5s', backgroundImage: `url('${cloudSvg3}')`, width: '200px', height: '80px', opacity: '0.9' }} />
+                    <div className="cloud" style={{ top: '15%', animationDuration: '90s', animationDelay: '-30s', backgroundImage: `url('${cloudSvg1}')`, width: '350px', height: '140px', opacity: '0.7' }} />
+                </div>
+            );
+        };
+        
+        const LoadingScreen = ({ theme }) => {
+            const themes = {
+                earth: { bg: 'bg-yellow-900', iconColor: 'text-green-400', barColor: 'bg-green-400' },
+                fire: { bg: 'bg-red-900', iconColor: 'text-orange-400', barColor: 'bg-orange-400' },
+                water: { bg: 'bg-blue-900', iconColor: 'text-cyan-400', barColor: 'bg-cyan-400' },
+            };
+            const currentTheme = themes[theme] || themes.earth;
+
+            const Icon = ({ theme }) => {
+                if (theme === 'earth') return <path strokeLinecap="round" strokeLinejoin="round" d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18ZM3.983 8.998a14.38 14.38 0 0 1 16.034 0ZM3.983 15.002a14.38 14.38 0 0 0 16.034 0ZM9 3.75a16.89 16.89 0 0 1 6 0ZM9 20.25a16.89 16.89 0 0 0 6 0m-3-16.5a18.88 18.88 0 0 1 0 18" />;
+                if (theme === 'fire') return <path strokeLinecap="round" strokeLinejoin="round" d="M15.362 5.214A8.252 8.252 0 0 1 12 21a8.25 8.25 0 0 1-6.038-13.952 8.287 8.287 0 0 0 3.038 2.552 8.983 8.983 0 0 1 3.362-3.797Z" />;
+                if (theme === 'water') return <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12.75V12A9.75 9.75 0 0 1 12 2.25v.75m0 18v-.75a9.75 9.75 0 0 0-9.75-9.75H1.5m11.25 9.75V12a9.75 9.75 0 0 0-9.75-9.75V1.5M12 21.75v-.75a9.75 9.75 0 0 1 9.75-9.75h.75" />;
+                return null;
+            }
+
+            return (
+                <div className={`fixed inset-0 z-50 flex flex-col items-center justify-center ${currentTheme.bg} animate-fade-in`}>
+                    <svg className={`w-24 h-24 ${currentTheme.iconColor} animate-pulse-icon`} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                       <Icon theme={theme} />
+                    </svg>
+                    <p className="text-white text-2xl mt-4 tracking-widest">LOADING...</p>
+                    <div className="w-64 h-4 bg-black/30 rounded-full mt-6 overflow-hidden border-2 border-white/20">
+                        <div className={`h-full ${currentTheme.barColor} loading-bar-progress rounded-full`}></div>
+                    </div>
+                </div>
+            );
+        };
+
+
+        const Panel = ({ children, className = '' }) => (
+            <div className={`bg-[#8c5a3b] border-4 border-[#5a3a29] rounded-lg shadow-lg p-6 sm:p-8 w-full max-w-xl text-white font-pixel ${className}`}>
+                {children}
+            </div>
+        );
+
+        const PixelButton = ({ onClick, children, className = '', variant = 'primary' }) => {
+            const baseClasses = "font-bold py-3 px-6 rounded-md border-b-4 active:border-b-0 active:translate-y-1 transition-all duration-100 focus:outline-none focus:ring-2 focus:ring-yellow-300 focus:ring-opacity-50 transform hover:scale-105";
+            const variants = {
+                primary: "bg-yellow-400 text-stone-800 border-orange-600 hover:bg-yellow-300 hover:border-orange-500",
+                secondary: "bg-orange-500 text-white border-orange-700 hover:bg-orange-400 hover:border-orange-600"
+            };
+            return (
+                <button onClick={onClick} className={`${baseClasses} ${variants[variant]} ${className}`}>
+                    {children}
+                </button>
+            );
+        };
+
+        const PixelInput = ({ value, onChange, placeholder, className = '' }) => (
+            <input
+                type="text"
+                value={value}
+                onChange={onChange}
+                placeholder={placeholder}
+                className={`bg-yellow-200 border-4 border-orange-500 rounded-md text-stone-800 placeholder:text-orange-800/70 px-4 py-3 text-center text-lg focus:outline-none focus:ring-2 ring-yellow-300 w-full ${className}`}
+            />
+        );
+
+        // --- Screen Components ---
+
+        const HomeScreen = ({ setScreen, onQuit }) => (
+            <div className="text-center">
+                <h1 className="text-7xl sm:text-8xl font-bold text-white mb-2 animate-float" style={{
+                    textShadow: '4px 4px 0px #5a3a29, 8px 8px 0px #f97316, 12px 12px 0px #facc15'
+                }}>ELEMENZ</h1>
+                <p className="text-yellow-200 mb-12 text-lg">A Pixelated Arena Battler</p>
+                <div className="space-y-4">
+                    <PixelButton onClick={() => setScreen('characterSelect')} className="w-full max-w-xs sm:w-64 text-2xl">
+                        START
+                    </PixelButton>
+                    <div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-4">
+                        <PixelButton onClick={() => setScreen('guide1')} className="w-full max-w-xs sm:w-48">
+                            GUIDE
+                        </PixelButton>
+                        <PixelButton onClick={onQuit} className="w-full max-w-xs sm:w-48">
+                            QUIT
+                        </PixelButton>
+                    </div>
+                </div>
+            </div>
+        );
+
+        const GuideScreen = ({ setScreen, page }) => (
+            <Panel>
+                {page === 1 && (
+                    <>
+                        <h2 className="text-3xl sm:text-4xl text-center mb-6 text-yellow-300">Welcome to ELEMENZ!</h2>
+                        <p className="mb-4 text-base sm:text-lg">A fast-paced 2D multiplayer combat game where you collect elements, merge them for powerful attacks, and battle other players!</p>
+                        <div className="flex flex-col sm:flex-row justify-between mt-6 text-base sm:text-xl space-y-2 sm:space-y-0">
+                            <div><strong className="text-yellow-200">Objective:</strong> Survive 10 minutes.</div>
+                            <div><strong className="text-yellow-200">Players:</strong> Up to 5 per match.</div>
+                        </div>
+                        <div className="flex justify-between items-center mt-8">
+                            <PixelButton onClick={() => setScreen('home')} variant="secondary">CLOSE</PixelButton>
+                            <PixelButton onClick={() => setScreen('guide2')}>NEXT &gt;</PixelButton>
+                        </div>
+                    </>
+                )}
+                {page === 2 && (
+                    <>
+                        <h2 className="text-3xl sm:text-4xl text-center mb-6 text-yellow-300">How To Play</h2>
+                        <ul className="list-disc list-inside space-y-3 text-base sm:text-lg">
+                            <li><strong>Move:</strong> Use WASD keys.</li>
+                            <li><strong>Collect:</strong> Walk over elements. You can hold up to 2.</li>
+                            <li><strong>Merge:</strong> Picking up a second element automatically merges them.</li>
+                            <li><strong>Attack:</strong> Press Spacebar to unleash your element's power.</li>
+                        </ul>
+                        <div className="flex justify-between mt-8">
+                            <PixelButton onClick={() => setScreen('guide1')}>&lt; PREVIOUS</PixelButton>
+                            <PixelButton onClick={() => setScreen('home')} variant="secondary">CLOSE</PixelButton>
+                        </div>
+                    </>
+                )}
+            </Panel>
+        );
+
+        const CharacterSelectScreen = ({ setScreen, playerName, setPlayerName, selectedBob, setSelectedBob, error, setError }) => {
+            const handleNext = () => {
+                if (playerName.trim() === '') {
+                    setError('Please enter a name!'); return;
+                }
+                if (selectedBob === null) {
+                    setError('Please select your character!'); return;
+                }
+                setError('');
+                setScreen('lobby');
+            };
+
+            return (
+                <Panel>
+                    <h2 className="text-3xl text-center mb-4 text-yellow-300">Choose Your Fighter</h2>
+                    {error && <p className="text-center text-red-400 mb-4 text-lg -mt-2">{error}</p>}
+                    <PixelInput
+                        value={playerName}
+                        onChange={(e) => { setPlayerName(e.target.value); setError(''); }}
+                        placeholder="ENTER YOUR NAME"
+                        className="mb-6"
+                    />
+                    <p className="text-center mb-4 text-xl">Pick Your Bob:</p>
+                    <div className="flex justify-center space-x-2 sm:space-x-4 mb-8">
+                        {bobImageData.map((bobSrc, index) => (
+                            <button
+                                key={index}
+                                onClick={() => { setSelectedBob(index); setError(''); }}
+                                className={`w-16 h-16 sm:w-20 sm:h-20 rounded-lg flex items-center justify-center transition-all duration-150 transform hover:scale-110 p-1 ${selectedBob === index ? 'bg-yellow-400/30 ring-4 ring-yellow-300' : 'bg-orange-500'}`}
+                            >
+                               <img src={bobSrc} alt={`Bob ${index + 1}`} className="w-full h-full object-contain pixel-art" />
+                            </button>
+                        ))}
+                    </div>
+                    <div className="flex justify-between">
+                        <PixelButton onClick={() => setScreen('home')} variant="secondary">&lt; BACK</PixelButton>
+                        <PixelButton onClick={handleNext}>NEXT &gt;</PixelButton>
+                    </div>
+                </Panel>
+            );
+        };
+
+        const LobbyScreen = ({ setScreen, lobbyCode, setLobbyCode, handleCreateLobby, handleJoinLobby, error, setError }) => (
+            <Panel>
+                <h2 className="text-4xl text-center mb-8 text-yellow-300">Multiplayer Lobby</h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 items-center">
+                    <div className="text-center space-y-4">
+                        <h3 className="text-2xl">CREATE LOBBY</h3>
+                        <PixelButton onClick={handleCreateLobby} className="w-full">CREATE</PixelButton>
+                    </div>
+                    <div className="text-center space-y-4">
+                        <h3 className="text-2xl">JOIN LOBBY</h3>
+                        <PixelInput
+                            value={lobbyCode}
+                            onChange={(e) => { setLobbyCode(e.target.value.toUpperCase()); setError(''); }}
+                            placeholder="ENTER CODE"
+                        />
+                        <PixelButton onClick={handleJoinLobby} className="w-full">JOIN</PixelButton>
+                    </div>
+                </div>
+                {error && <p className="text-center text-red-400 mt-6 text-lg">{error}</p>}
+                <div className="text-center mt-12">
+                    <PixelButton onClick={() => setScreen('characterSelect')} variant="secondary">&lt; BACK</PixelButton>
+                </div>
+            </Panel>
+        );
+
+       const LobbyWaitingScreen = ({ setScreen, lobbyCode, players, handleStartGame }) => {
+           return (
+               <Panel>
+                   <h2 className="text-3xl text-center mb-4 text-yellow-300">Lobby Waiting Room</h2>
+                   <div className="text-center mb-6">
+                       <p className="text-lg">SHARE THIS CODE:</p>
+                       <p className="text-4xl sm:text-5xl font-bold text-white tracking-widest bg-[#5a3a29] py-2 px-4 rounded-md inline-block my-2">{lobbyCode}</p>
+                   </div>
+                   <div className="bg-[#5a3a29] p-4 rounded-md min-h-[200px]">
+                       <h3 className="text-2xl mb-4 text-yellow-300">Players ({players.length}/5)</h3>
+                       <div className="space-y-3">
+                           {players.map((player, index) => (
+                               <div key={index} className="bg-orange-500 p-3 rounded-md flex items-center justify-between">
+                                   <img
+                                        src={bobImageData[player.bobIndex]}
+                                        alt={`Bob ${player.bobIndex + 1}`}
+                                        className="w-12 h-12 object-contain pixel-art"
+                                    />
+                                   <span className="text-xl font-bold">{player.name}</span>
+                               </div>
+                           ))}
+                       </div>
+                   </div>
+                   <div className="flex justify-between mt-8">
+                       <PixelButton onClick={() => setScreen('lobby')} variant="secondary">&lt; BACK</PixelButton>
+                       <PixelButton onClick={handleStartGame}>START GAME</PixelButton>
+                   </div>
+               </Panel>
+           );
+       };
+      
+       const GameScreen = () => {
+            useEffect(() => {
+               const gameContainer = document.getElementById('game-container');
+               const canvas = document.createElement('canvas');
+               canvas.id = 'gameCanvas';
+               canvas.width = 1200;
+               canvas.height = 720;
+               gameContainer.innerHTML = '';
+               gameContainer.appendChild(canvas);
+
+               const ctx = canvas.getContext('2d');
+               ctx.fillStyle = '#7ed957';
+               ctx.fillRect(0,0,1200,720);
+               ctx.fillStyle = 'white';
+               ctx.font = '48px "Press Start 2P"';
+               ctx.textAlign = 'center';
+               ctx.fillText('Game Starts Here!', 600, 360);
+           }, []);
+           return <div id="game-container"></div>;
+       };
+      
+       const QuitConfirmModal = ({ onConfirm, onCancel }) => (
+           <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 animate-fade-in">
+               <Panel className="text-center">
+                   <h2 className="text-2xl sm:text-3xl text-yellow-300 mb-8">Are you sure you want to quit?</h2>
+                   <div className="flex justify-center space-x-4">
+                       <PixelButton onClick={onConfirm} className="w-32">YES</PixelButton>
+                       <PixelButton onClick={onCancel} variant="secondary" className="w-32">NO</PixelButton>
+                   </div>
+               </Panel>
+           </div>
+       );
+
+       // --- Main App Component ---
+
+       function App() {
+            const [screen, setScreen] = useState('home');
+            const [animationState, setAnimationState] = useState('in');
+            const [isLoading, setIsLoading] = useState(false);
+            const [loadingTheme, setLoadingTheme] = useState('earth');
+            
+            const [playerName, setPlayerName] = useState('');
+            const [selectedBob, setSelectedBob] = useState(null);
+            const [lobbyCode, setLobbyCode] = useState('');
+            const [error, setError] = useState('');
+            const [players, setPlayers] = useState([]);
+            const [showQuitConfirm, setShowQuitConfirm] = useState(false);
+            const [isExiting, setIsExiting] = useState(false);
+
+            const navigateTo = (nextScreen) => {
+                if (animationState === 'in' && !isLoading) {
+                    setAnimationState('out');
+                    setTimeout(() => {
+                        const themes = ['earth', 'fire', 'water'];
+                        setLoadingTheme(themes[Math.floor(Math.random() * themes.length)]);
+                        setIsLoading(true);
+                        document.getElementById('main-content').style.visibility = 'hidden';
+
+                        setTimeout(() => {
+                            setIsLoading(false);
+                            setScreen(nextScreen);
+                            setAnimationState('in');
+                             document.getElementById('main-content').style.visibility = 'visible';
+                        }, 1200);
+
+                    }, 300);
+                }
+            };
+            
+            function getLobbies() {
+                try {
+                    const stored = localStorage.getItem('elemenz_lobbies');
+                    return stored ? JSON.parse(stored) : {};
+                } catch (e) { return {}; }
+            }
+
+            function setLobbies(lobbies) {
+                localStorage.setItem('elemenz_lobbies', JSON.stringify(lobbies));
+            }
+
+            const handleCreateLobby = () => {
+                const newCode = Math.random().toString(36).substring(2, 6).toUpperCase();
+                setLobbyCode(newCode);
+                if (selectedBob !== null && playerName.trim() !== '') {
+                    const lobbies = getLobbies();
+                    lobbies[newCode] = [{ name: playerName, bobIndex: selectedBob }];
+                    setLobbies(lobbies);
+                    setPlayers(lobbies[newCode]);
+                    navigateTo('lobbyWaiting');
+                } else {
+                    setError('Please select a character and enter your name first!');
+                    navigateTo('characterSelect');
+                }
+            };
+
+            const handleJoinLobby = () => {
+                const code = lobbyCode.trim().toUpperCase();
+                if (code === '') { setError('Please enter a lobby code.'); return; }
+                if (playerName.trim() === '') { setError('Please enter your name.'); return; }
+                if (selectedBob === null) { setError('Please select your character!'); return; }
+                
+                const lobbies = getLobbies();
+                
+                if (!lobbies[code]) { setError('Invalid lobby code!'); return; }
+                if (lobbies[code].length >= 5) { setError('Lobby is full!'); return; }
+                
+                setError('');
+                lobbies[code].push({ name: playerName, bobIndex: selectedBob });
+                setLobbies(lobbies);
+                setPlayers([...lobbies[code]]);
+                setLobbyCode(code);
+                navigateTo('lobbyWaiting');
+            };
+
+           const handleStartGame = () => navigateTo('game');
+           const handleQuitConfirm = () => setIsExiting(true);
+           const handleQuitCancel = () => setShowQuitConfirm(false);
+
+           useEffect(() => {
+                if (screen === 'game') {
+                    document.body.style.background = '#000';
+                } else {
+                    document.body.style.background = `linear-gradient(to bottom, #87CEEB 0%, #B0E0E6 60%, #3CB371 85%, #2E8B57 100%)`;
+                }
+           }, [screen]);
+
+
+           if (isExiting) {
+               return (
+                   <div className="w-screen h-screen flex items-center justify-center text-center">
+                       <h1 className="text-4xl text-white">Thanks for playing!</h1>
+                   </div>
+               );
+           }
+           
+            const renderScreen = () => {
+                const screenProps = {
+                    setScreen: navigateTo,
+                    playerName, setPlayerName,
+                    selectedBob, setSelectedBob,
+                    lobbyCode, setLobbyCode,
+                    error, setError,
+                    players, handleStartGame,
+                    handleCreateLobby, handleJoinLobby
+                };
+
+               switch (screen) {
+                   case 'guide1': return <GuideScreen {...screenProps} page={1} />;
+                   case 'guide2': return <GuideScreen {...screenProps} page={2} />;
+                   case 'characterSelect': return <CharacterSelectScreen {...screenProps} />;
+                   case 'lobby': return <LobbyScreen {...screenProps} />;
+                   case 'lobbyWaiting': return <LobbyWaitingScreen {...screenProps} />;
+                   case 'game': return <GameScreen {...screenProps} />;
+                   case 'home':
+                   default: return <HomeScreen setScreen={navigateTo} onQuit={() => setShowQuitConfirm(true)} />;
+               }
+            };
+           
+            const animationClass = animationState === 'in' ? 'animate-fade-in' : 'animate-fade-out';
+
+           return (
+               <React.Fragment>
+                    <Scenery />
+                    {isLoading && <LoadingScreen theme={loadingTheme} />}
+                    <main id="main-content" className="w-screen h-screen flex items-center justify-center p-4 relative z-20">
+                        <div className={animationClass} style={{width: '100%', display: 'flex', justifyContent: 'center'}}>
+                            {renderScreen()}
+                        </div>
+                    </main>
+                    {showQuitConfirm && <QuitConfirmModal onConfirm={handleQuitConfirm} onCancel={handleQuitCancel} />}
+               </React.Fragment>
+           );
+       }
+
+       const container = document.getElementById('root');
+       const root = ReactDOM.createRoot(container);
+       root.render(<App />);
+   </script>
+</body>
+</html>
+
